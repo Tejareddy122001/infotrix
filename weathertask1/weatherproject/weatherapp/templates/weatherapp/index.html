@@ -1,0 +1,104 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <style>
+      body{
+       background-color: antiquewhite;
+      }
+    </style>
+</head>
+
+<body>
+  <h1 style="text-align: center;">WeatherApp</h1>
+    <form method="POST" id="searchForm">
+        {% csrf_token %}
+        <input type="text" name="city" id="cityInput" placeholder="Enter City">
+        <button type="submit" class="btn">Search</button>
+    </form>
+
+    <h3 id="temperature">Temperature: {{ temp }} C</h3>
+    <h3 id="city">City: {{ city_name }}</h3>
+    <h3 id="description">Description: {{ description }}</h3>
+    <h3 id="humidity">Humidity: {{ humidity }}%</h3>
+    <h3 id="windSpeed">Wind Speed: {{ wind_speed }} km/h</h3>
+    <h3 id="day">Day: {{ day }}</h3>
+
+    <button id="addToFavoritesBtn" onclick="addToFavorites()">Add to Favorites</button>
+    <button id="removeFromFavoritesBtn" onclick="removeFromFavorites('{{ city_name }}')" style="display: none;">Remove from Favorites</button>
+
+    <h3>Favorite Cities:</h3>
+    <ul id="favoriteCitiesList">
+        {% for fav_city in favorite_cities %}
+            <li>{{ fav_city }} <button onclick="removeFromFavorites('{{ fav_city }}')">Remove</button></li>
+        {% endfor %}
+    </ul>
+
+    <script>
+        // JavaScript for auto-refresh every 15-30 seconds
+        setInterval(function () {
+            refreshWeather();
+        }, Math.floor(Math.random() * (30000 - 15000 + 1)) + 15000);
+
+        // JavaScript function to add a city to favorites
+        function addToFavorites() {
+            const cityInput = document.getElementById('cityInput').value;
+            $.post(`/add-to-favorite/${cityInput}/`, function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    console.error(data.message);
+                }
+            });
+        }
+
+        // JavaScript function to remove a city from favorites
+        function removeFromFavorites(city) {
+            $.post(`/remove-from-favorite/${city}/`, function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    console.error(data.message);
+                }
+            });
+        }
+
+        // JavaScript function to refresh weather data
+        function refreshWeather() {
+            const cityInput = document.getElementById('cityInput').value;
+            $.get(`/refresh-weather/?city=${cityInput}`, function(data) {
+                document.getElementById('temperature').innerText = `Temperature: ${data.temp} C`;
+                document.getElementById('city').innerText = `City: ${data.city_name}`;
+                document.getElementById('description').innerText = `Description: ${data.description}`;
+                document.getElementById('humidity').innerText = `Humidity: ${data.humidity}%`;
+                document.getElementById('windSpeed').innerText = `Wind Speed: ${data.wind_speed} km/h`;
+                document.getElementById('day').innerText = `Day: ${data.day}`;
+
+                // Update favorite cities list
+                const favoriteCitiesList = document.getElementById('favoriteCitiesList');
+                favoriteCitiesList.innerHTML = '';
+                data.favorite_cities.forEach(fav_city => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${fav_city} <button onclick="removeFromFavorites('${fav_city}')">Remove</button>`;
+                    favoriteCitiesList.appendChild(li);
+                });
+
+                // Update Add to Favorites and Remove from Favorites buttons
+                const addToFavoritesBtn = document.getElementById('addToFavoritesBtn');
+                const removeFromFavoritesBtn = document.getElementById('removeFromFavoritesBtn');
+                if (data.is_favorite) {
+                    addToFavoritesBtn.style.display = 'none';
+                    removeFromFavoritesBtn.style.display = 'block';
+                } else {
+                    addToFavoritesBtn.style.display = 'block';
+                    removeFromFavoritesBtn.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
